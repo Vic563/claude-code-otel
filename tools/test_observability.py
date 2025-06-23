@@ -11,9 +11,16 @@ import sys
 from datetime import datetime, timedelta
 from pathlib import Path
 
+# Auto-install missing dependencies
+try:
+    from auto_install import ensure_dependencies
+    ensure_dependencies()
+except ImportError:
+    # auto_install not available, continue without it
+    pass
+
 # Add tools to path
 sys.path.append(str(Path(__file__).parent / "logger"))
-sys.path.append(str(Path(__file__).parent / "reports"))
 sys.path.append(str(Path(__file__).parent / "reports"))
 
 from database import ObservabilityDatabase
@@ -183,18 +190,18 @@ def test_report_generation():
     print("\nTesting report generation...")
     
     # Import the report generator
-    sys.path.append(os.path.join(os.path.dirname(__file__), 'reports'))
-    from generate_reports import ReportGenerator
+    try:
+        from reports.generate_reports import ReportGenerator
+    except ImportError:
+        sys.path.append(os.path.join(os.path.dirname(__file__), 'reports'))
+        from generate_reports import ReportGenerator
     
     generator = ReportGenerator(db_path="test_observability.db")
     generator.connect()
     
-    # Get date range for testing
-    start_date, end_date = generator.get_date_range("week")
-    
     # Test cost report
     print("  Generating cost report...")
-    cost_report = generator.generate_cost_report(start_date, end_date)
+    cost_report = generator.generate_cost_report("week")
     print(f"    Total cost: ${cost_report['summary']['total_cost']:.2f}")
     print(f"    Sessions: {cost_report['summary']['total_sessions']}")
     print(f"    Users: {cost_report['summary']['unique_users']}")
@@ -202,7 +209,7 @@ def test_report_generation():
     
     # Test user activity report  
     print("  Generating user activity report...")
-    activity_report = generator.generate_user_activity_report(start_date, end_date)
+    activity_report = generator.generate_user_activity_report("week")
     print(f"    Unique users: {activity_report['summary']['unique_users']}")
     print(f"    Total sessions: {activity_report['summary']['total_sessions']}")
     print(f"    Lines added: {activity_report['summary']['total_lines_added']}")
@@ -213,35 +220,28 @@ def test_report_generation():
     output_dir = Path("test_reports")
     output_dir.mkdir(exist_ok=True)
     
-    csv_file = output_dir / "test_cost_report.csv"
-    generator.export_csv(cost_report, str(csv_file))
-    print(f"    Created cost report CSV files")
+    # Test CSV export
+    print("  Testing CSV export...")
+    csv_file = generator.export_to_csv(cost_report, str(output_dir), "cost")
+    print(f"    Created: {csv_file}")
     
-    csv_file = output_dir / "test_activity_report.csv"
-    generator.export_csv(activity_report, str(csv_file))
-    print(f"    Created activity report CSV files")
+    csv_file = generator.export_to_csv(activity_report, str(output_dir), "user_activity")
+    print(f"    Created: {csv_file}")
     
     # Test JSON export
     print("  Testing JSON export...")
-    json_file = output_dir / "test_cost_report.json"
-    generator.export_json(cost_report, str(json_file))
+    json_file = generator.export_to_json(cost_report, str(output_dir), "cost")
     print(f"    Created: {json_file}")
     
     # Test PDF export (if available)
     print("  Testing PDF export...")
-    pdf_file = output_dir / "test_cost_report.pdf"
-    generator.export_pdf(cost_report, str(pdf_file))
-    print(f"    Created: {pdf_file}")
+    pdf_file = generator.export_to_pdf(cost_report, str(output_dir), "cost")
+    if pdf_file:
+        print(f"    Created: {pdf_file}")
+    else:
+        print("    PDF export not available (reportlab not installed)")
     
-    generator.disconnect()
-    print(f"    Created: {csv_file}")
-    
-    # Test JSON export
-    json_file = output_dir / "test_cost_report.json"
-    with open(json_file, 'w') as f:
-        json.dump(cost_report, f, indent=2, default=str)
-    print(f"    Created: {json_file}")
-    
+    generator.close()
     print("✅ Report generation test completed")
 
 

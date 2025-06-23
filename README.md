@@ -75,6 +75,28 @@ Claude Code → OpenTelemetry Collector → Prometheus (metrics) + Loki (events/
 
 ## 🚀 Quick Start
 
+### 🎯 **Plug & Play Setup** (New!)
+```bash
+# One command setup - installs everything automatically!
+make setup-observability
+
+# Start the monitoring stack
+make up
+
+# Start collecting data
+make start-logger
+
+# Generate reports
+make generate-cost-report
+make generate-user-report
+```
+
+✅ **Zero configuration needed!** Auto-installs dependencies in isolated environment  
+✅ **No conflicts** with existing Python packages  
+✅ **Works immediately** - no manual dependency management  
+
+> **📖 Detailed Setup Guide**: See [PLUG_AND_PLAY_SETUP.md](PLUG_AND_PLAY_SETUP.md) for complete instructions
+
 ### 1. Start the Stack
 ```bash
 # Start all services

@@ -96,22 +96,53 @@ demo-metrics: ## Generate demo metrics for testing
 	@echo "💡 To see real metrics, ensure Claude Code is configured with telemetry enabled"
 	@echo "📖 Run 'make setup-claude' for setup instructions"
 
-# Observability logging and reporting targets
-install-observability-tools: ## Install Python dependencies for observability tools
+# Observability setup and management targets
+setup-observability: ## Complete setup of observability tools (plug-and-play)
+	@echo "🚀 Setting up Claude Code observability tools..."
+	python setup_observability.py
+	@echo "✅ Setup complete! Ready to use."
+
+install-observability-tools: ## Install Python dependencies for observability tools (legacy)
 	@echo "📦 Installing observability tools dependencies..."
+	@echo "💡 Consider using 'make setup-observability' for a better experience"
 	pip install -r tools/requirements.txt
 	@echo "✅ Dependencies installed!"
 
-start-logger: ## Start the background observability logger
+check-observability-setup: ## Check if observability tools are properly set up
+	@echo "🔍 Checking observability tools setup..."
+	@if [ -d "venv_observability" ]; then \
+		echo "✅ Virtual environment exists"; \
+		./venv_observability/bin/python -c "import sqlite3; import csv; print('✅ Core dependencies available')" 2>/dev/null || echo "❌ Core dependencies missing"; \
+		if [ -f "tools/reports/generate_reports.py" ]; then \
+			echo "✅ Report generator available"; \
+		else \
+			echo "❌ Report generator missing"; \
+		fi; \
+		if [ -f "tools/logger/background_logger.py" ]; then \
+			echo "✅ Background logger available"; \
+		else \
+			echo "❌ Background logger missing"; \
+		fi; \
+	else \
+		echo "❌ Virtual environment not found"; \
+		echo "💡 Run 'make setup-observability' to set up"; \
+	fi
+
+start-logger: check-observability-setup ## Start the background observability logger
 	@echo "🚀 Starting Claude Code observability background logger..."
 	@echo "📊 Reading from OpenTelemetry collector logs..."
-	cd tools/logger && python background_logger.py \
-		--source otel-collector \
-		--source-type docker \
-		--db-path ../../claude_code_observability.db \
-		--log-level INFO
+	@if [ -d "venv_observability" ]; then \
+		./venv_observability/bin/python tools/logger/background_logger.py \
+			--source otel-collector \
+			--source-type docker \
+			--db-path claude_code_observability.db \
+			--log-level INFO; \
+	else \
+		echo "❌ Virtual environment not found. Run 'make setup-observability' first"; \
+		exit 1; \
+	fi
 
-start-logger-file: ## Start logger reading from a log file
+start-logger-file: check-observability-setup ## Start logger reading from a log file
 	@echo "🚀 Starting Claude Code observability logger (file mode)..."
 	@echo "📝 Usage: make start-logger-file LOG_FILE=/path/to/logfile"
 	@if [ -z "$(LOG_FILE)" ]; then \
@@ -119,72 +150,106 @@ start-logger-file: ## Start logger reading from a log file
 		echo "   Example: make start-logger-file LOG_FILE=/tmp/claude_code.log"; \
 		exit 1; \
 	fi
-	cd tools/logger && python background_logger.py \
-		--source $(LOG_FILE) \
-		--source-type file \
-		--db-path ../../claude_code_observability.db \
-		--log-level INFO
+	@if [ -d "venv_observability" ]; then \
+		./venv_observability/bin/python tools/logger/background_logger.py \
+			--source $(LOG_FILE) \
+			--source-type file \
+			--db-path claude_code_observability.db \
+			--log-level INFO; \
+	else \
+		echo "❌ Virtual environment not found. Run 'make setup-observability' first"; \
+		exit 1; \
+	fi
 
-start-logger-stdin: ## Start logger reading from stdin
+start-logger-stdin: check-observability-setup ## Start logger reading from stdin
 	@echo "🚀 Starting Claude Code observability logger (stdin mode)..."
 	@echo "📥 Pipe your logs to this command"
-	cd tools/logger && python background_logger.py \
-		--source stdin \
-		--source-type stdin \
-		--db-path ../../claude_code_observability.db \
-		--log-level INFO
+	@if [ -d "venv_observability" ]; then \
+		./venv_observability/bin/python tools/logger/background_logger.py \
+			--source stdin \
+			--source-type stdin \
+			--db-path claude_code_observability.db \
+			--log-level INFO; \
+	else \
+		echo "❌ Virtual environment not found. Run 'make setup-observability' first"; \
+		exit 1; \
+	fi
 
-generate-cost-report: ## Generate weekly cost report (CSV + PDF)
+generate-cost-report: check-observability-setup ## Generate weekly cost report (CSV + PDF)
 	@echo "💰 Generating weekly cost report..."
-	cd tools/reports && python generate_reports.py \
-		--report-type cost \
-		--period week \
-		--format csv --format pdf \
-		--db-path ../../claude_code_observability.db \
-		--output-dir ../../reports
+	@mkdir -p reports
+	@if [ -d "venv_observability" ]; then \
+		./venv_observability/bin/python tools/reports/generate_reports.py \
+			--report-type cost \
+			--period week \
+			--format csv --format pdf \
+			--db-path claude_code_observability.db \
+			--output-dir reports; \
+	else \
+		echo "❌ Virtual environment not found. Run 'make setup-observability' first"; \
+		exit 1; \
+	fi
 	@echo "✅ Cost report generated in reports/ directory"
 
-generate-user-report: ## Generate weekly user activity report (CSV + PDF)
+generate-user-report: check-observability-setup ## Generate weekly user activity report (CSV + PDF)
 	@echo "👥 Generating weekly user activity report..."
-	cd tools/reports && python generate_reports.py \
-		--report-type user_activity \
-		--period week \
-		--format csv --format pdf \
-		--db-path ../../claude_code_observability.db \
-		--output-dir ../../reports
+	@mkdir -p reports
+	@if [ -d "venv_observability" ]; then \
+		./venv_observability/bin/python tools/reports/generate_reports.py \
+			--report-type user_activity \
+			--period week \
+			--format csv --format pdf \
+			--db-path claude_code_observability.db \
+			--output-dir reports; \
+	else \
+		echo "❌ Virtual environment not found. Run 'make setup-observability' first"; \
+		exit 1; \
+	fi
 	@echo "✅ User activity report generated in reports/ directory"
 
-generate-monthly-reports: ## Generate monthly cost and user activity reports
+generate-monthly-reports: check-observability-setup ## Generate monthly cost and user activity reports
 	@echo "📊 Generating monthly reports..."
-	cd tools/reports && python generate_reports.py \
-		--report-type cost \
-		--period month \
-		--format csv --format pdf --format json \
-		--db-path ../../claude_code_observability.db \
-		--output-dir ../../reports
-	cd tools/reports && python generate_reports.py \
-		--report-type user_activity \
-		--period month \
-		--format csv --format pdf --format json \
-		--db-path ../../claude_code_observability.db \
-		--output-dir ../../reports
+	@mkdir -p reports
+	@if [ -d "venv_observability" ]; then \
+		./venv_observability/bin/python tools/reports/generate_reports.py \
+			--report-type cost \
+			--period month \
+			--format csv --format pdf --format json \
+			--db-path claude_code_observability.db \
+			--output-dir reports; \
+		./venv_observability/bin/python tools/reports/generate_reports.py \
+			--report-type user_activity \
+			--period month \
+			--format csv --format pdf --format json \
+			--db-path claude_code_observability.db \
+			--output-dir reports; \
+	else \
+		echo "❌ Virtual environment not found. Run 'make setup-observability' first"; \
+		exit 1; \
+	fi
 	@echo "✅ Monthly reports generated in reports/ directory"
 
-generate-custom-report: ## Generate custom period report (requires START_DATE and END_DATE)
+generate-custom-report: check-observability-setup ## Generate custom period report (requires START_DATE and END_DATE)
 	@echo "📅 Generating custom period report..."
 	@if [ -z "$(START_DATE)" ] || [ -z "$(END_DATE)" ] || [ -z "$(REPORT_TYPE)" ]; then \
 		echo "❌ Error: START_DATE, END_DATE, and REPORT_TYPE parameters required"; \
 		echo "   Example: make generate-custom-report START_DATE=2024-01-01 END_DATE=2024-01-31 REPORT_TYPE=cost"; \
 		exit 1; \
 	fi
-	cd tools/reports && python generate_reports.py \
-		--report-type $(REPORT_TYPE) \
-		--period custom \
-		--start-date $(START_DATE) \
-		--end-date $(END_DATE) \
-		--format csv --format pdf \
-		--db-path ../../claude_code_observability.db \
-		--output-dir ../../reports
+	@mkdir -p reports
+	@if [ -d "venv_observability" ]; then \
+		./venv_observability/bin/python tools/reports/generate_reports.py \
+			--report-type $(REPORT_TYPE) \
+			--period custom \
+			--start-date $(START_DATE) \
+			--end-date $(END_DATE) \
+			--format csv --format pdf \
+			--db-path claude_code_observability.db \
+			--output-dir reports; \
+	else \
+		echo "❌ Virtual environment not found. Run 'make setup-observability' first"; \
+		exit 1; \
+	fi
 	@echo "✅ Custom report generated in reports/ directory"
 
 check-db: ## Check database status and show recent entries
@@ -208,7 +273,12 @@ clean-db: ## Clean/reset the observability database
 		echo "ℹ️  No database to clean"; \
 	fi
 
-test-observability: ## Test the observability tools with sample data
+test-observability: check-observability-setup ## Test the observability tools with sample data
 	@echo "🧪 Testing observability tools..."
-	cd tools && python test_observability.py
+	@if [ -d "venv_observability" ]; then \
+		./venv_observability/bin/python tools/test_observability.py; \
+	else \
+		echo "❌ Virtual environment not found. Run 'make setup-observability' first"; \
+		exit 1; \
+	fi
 	@echo "✅ Test completed - check test_reports/ for generated files" 

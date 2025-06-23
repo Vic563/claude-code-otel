@@ -17,6 +17,14 @@ import signal
 import threading
 from queue import Queue, Empty
 
+# Auto-install missing dependencies
+try:
+    from auto_install import ensure_dependencies
+    ensure_dependencies()
+except ImportError:
+    # auto_install not available, continue without it
+    pass
+
 from database import ObservabilityDatabase
 
 
