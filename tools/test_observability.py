@@ -5,6 +5,7 @@ Creates sample data and generates test reports.
 """
 
 import json
+import os
 import sqlite3
 import sys
 from datetime import datetime, timedelta
@@ -13,9 +14,9 @@ from pathlib import Path
 # Add tools to path
 sys.path.append(str(Path(__file__).parent / "logger"))
 sys.path.append(str(Path(__file__).parent / "reports"))
+sys.path.append(str(Path(__file__).parent / "reports"))
 
 from database import ObservabilityDatabase
-from generate_reports import ReportGenerator
 
 
 def create_sample_data(db: ObservabilityDatabase):
@@ -181,21 +182,31 @@ def test_report_generation():
     """Test report generation."""
     print("\nTesting report generation...")
     
+    # Import the report generator
+    sys.path.append(os.path.join(os.path.dirname(__file__), 'reports'))
+    from generate_reports import ReportGenerator
+    
     generator = ReportGenerator(db_path="test_observability.db")
+    generator.connect()
+    
+    # Get date range for testing
+    start_date, end_date = generator.get_date_range("week")
     
     # Test cost report
     print("  Generating cost report...")
-    cost_report = generator.generate_cost_report("week")
-    print(f"    Total cost: ${cost_report['total_cost']}")
-    print(f"    Models: {list(cost_report['model_breakdown'].keys())}")
-    print(f"    Users: {len(cost_report['user_breakdown'])} users")
+    cost_report = generator.generate_cost_report(start_date, end_date)
+    print(f"    Total cost: ${cost_report['summary']['total_cost']:.2f}")
+    print(f"    Sessions: {cost_report['summary']['total_sessions']}")
+    print(f"    Users: {cost_report['summary']['unique_users']}")
+    print(f"    Models: {len(cost_report['by_model'])} models")
     
     # Test user activity report  
     print("  Generating user activity report...")
-    activity_report = generator.generate_user_activity_report("week")
-    print(f"    Unique users: {activity_report['unique_users']}")
-    print(f"    Total sessions: {activity_report['activity_totals']['total_sessions']}")
-    print(f"    Total commits: {activity_report['activity_totals']['total_commits']}")
+    activity_report = generator.generate_user_activity_report(start_date, end_date)
+    print(f"    Unique users: {activity_report['summary']['unique_users']}")
+    print(f"    Total sessions: {activity_report['summary']['total_sessions']}")
+    print(f"    Lines added: {activity_report['summary']['total_lines_added']}")
+    print(f"    Tool usage events: {len(activity_report['tool_usage'])}")
     
     # Test CSV export
     print("  Testing CSV export...")
@@ -203,11 +214,26 @@ def test_report_generation():
     output_dir.mkdir(exist_ok=True)
     
     csv_file = output_dir / "test_cost_report.csv"
-    generator.export_to_csv(cost_report, str(csv_file), "cost")
-    print(f"    Created: {csv_file}")
+    generator.export_csv(cost_report, str(csv_file))
+    print(f"    Created cost report CSV files")
     
     csv_file = output_dir / "test_activity_report.csv"
-    generator.export_to_csv(activity_report, str(csv_file), "user_activity")
+    generator.export_csv(activity_report, str(csv_file))
+    print(f"    Created activity report CSV files")
+    
+    # Test JSON export
+    print("  Testing JSON export...")
+    json_file = output_dir / "test_cost_report.json"
+    generator.export_json(cost_report, str(json_file))
+    print(f"    Created: {json_file}")
+    
+    # Test PDF export (if available)
+    print("  Testing PDF export...")
+    pdf_file = output_dir / "test_cost_report.pdf"
+    generator.export_pdf(cost_report, str(pdf_file))
+    print(f"    Created: {pdf_file}")
+    
+    generator.disconnect()
     print(f"    Created: {csv_file}")
     
     # Test JSON export
