@@ -94,4 +94,121 @@ setup-claude: ## Display Claude Code telemetry setup instructions
 demo-metrics: ## Generate demo metrics for testing
 	@echo "🎯 This would generate demo metrics if Claude Code was running"
 	@echo "💡 To see real metrics, ensure Claude Code is configured with telemetry enabled"
-	@echo "📖 Run 'make setup-claude' for setup instructions" 
+	@echo "📖 Run 'make setup-claude' for setup instructions"
+
+# Observability logging and reporting targets
+install-observability-tools: ## Install Python dependencies for observability tools
+	@echo "📦 Installing observability tools dependencies..."
+	pip install -r tools/requirements.txt
+	@echo "✅ Dependencies installed!"
+
+start-logger: ## Start the background observability logger
+	@echo "🚀 Starting Claude Code observability background logger..."
+	@echo "📊 Reading from OpenTelemetry collector logs..."
+	cd tools/logger && python background_logger.py \
+		--source otel-collector \
+		--source-type docker \
+		--db-path ../../claude_code_observability.db \
+		--log-level INFO
+
+start-logger-file: ## Start logger reading from a log file
+	@echo "🚀 Starting Claude Code observability logger (file mode)..."
+	@echo "📝 Usage: make start-logger-file LOG_FILE=/path/to/logfile"
+	@if [ -z "$(LOG_FILE)" ]; then \
+		echo "❌ Error: LOG_FILE parameter required"; \
+		echo "   Example: make start-logger-file LOG_FILE=/tmp/claude_code.log"; \
+		exit 1; \
+	fi
+	cd tools/logger && python background_logger.py \
+		--source $(LOG_FILE) \
+		--source-type file \
+		--db-path ../../claude_code_observability.db \
+		--log-level INFO
+
+start-logger-stdin: ## Start logger reading from stdin
+	@echo "🚀 Starting Claude Code observability logger (stdin mode)..."
+	@echo "📥 Pipe your logs to this command"
+	cd tools/logger && python background_logger.py \
+		--source stdin \
+		--source-type stdin \
+		--db-path ../../claude_code_observability.db \
+		--log-level INFO
+
+generate-cost-report: ## Generate weekly cost report (CSV + PDF)
+	@echo "💰 Generating weekly cost report..."
+	cd tools/reports && python generate_reports.py \
+		--report-type cost \
+		--period week \
+		--format csv --format pdf \
+		--db-path ../../claude_code_observability.db \
+		--output-dir ../../reports
+	@echo "✅ Cost report generated in reports/ directory"
+
+generate-user-report: ## Generate weekly user activity report (CSV + PDF)
+	@echo "👥 Generating weekly user activity report..."
+	cd tools/reports && python generate_reports.py \
+		--report-type user_activity \
+		--period week \
+		--format csv --format pdf \
+		--db-path ../../claude_code_observability.db \
+		--output-dir ../../reports
+	@echo "✅ User activity report generated in reports/ directory"
+
+generate-monthly-reports: ## Generate monthly cost and user activity reports
+	@echo "📊 Generating monthly reports..."
+	cd tools/reports && python generate_reports.py \
+		--report-type cost \
+		--period month \
+		--format csv --format pdf --format json \
+		--db-path ../../claude_code_observability.db \
+		--output-dir ../../reports
+	cd tools/reports && python generate_reports.py \
+		--report-type user_activity \
+		--period month \
+		--format csv --format pdf --format json \
+		--db-path ../../claude_code_observability.db \
+		--output-dir ../../reports
+	@echo "✅ Monthly reports generated in reports/ directory"
+
+generate-custom-report: ## Generate custom period report (requires START_DATE and END_DATE)
+	@echo "📅 Generating custom period report..."
+	@if [ -z "$(START_DATE)" ] || [ -z "$(END_DATE)" ] || [ -z "$(REPORT_TYPE)" ]; then \
+		echo "❌ Error: START_DATE, END_DATE, and REPORT_TYPE parameters required"; \
+		echo "   Example: make generate-custom-report START_DATE=2024-01-01 END_DATE=2024-01-31 REPORT_TYPE=cost"; \
+		exit 1; \
+	fi
+	cd tools/reports && python generate_reports.py \
+		--report-type $(REPORT_TYPE) \
+		--period custom \
+		--start-date $(START_DATE) \
+		--end-date $(END_DATE) \
+		--format csv --format pdf \
+		--db-path ../../claude_code_observability.db \
+		--output-dir ../../reports
+	@echo "✅ Custom report generated in reports/ directory"
+
+check-db: ## Check database status and show recent entries
+	@echo "🗄️  Checking observability database status..."
+	@if [ -f claude_code_observability.db ]; then \
+		echo "✅ Database exists"; \
+		sqlite3 claude_code_observability.db "SELECT 'Sessions: ' || COUNT(*) FROM sessions UNION ALL SELECT 'Metrics: ' || COUNT(*) FROM metrics UNION ALL SELECT 'Events: ' || COUNT(*) FROM events UNION ALL SELECT 'Costs: ' || COUNT(*) FROM costs;"; \
+		echo "📊 Recent entries:"; \
+		sqlite3 claude_code_observability.db "SELECT 'Latest metric: ' || metric_name || ' = ' || metric_value || ' (' || datetime(timestamp) || ')' FROM metrics ORDER BY timestamp DESC LIMIT 1;"; \
+		sqlite3 claude_code_observability.db "SELECT 'Latest event: ' || event_name || ' (' || datetime(timestamp) || ')' FROM events ORDER BY timestamp DESC LIMIT 1;"; \
+	else \
+		echo "❌ Database not found. Start the logger first with 'make start-logger'"; \
+	fi
+
+clean-db: ## Clean/reset the observability database
+	@echo "🧹 Cleaning observability database..."
+	@if [ -f claude_code_observability.db ]; then \
+		rm claude_code_observability.db; \
+		echo "✅ Database cleaned"; \
+	else \
+		echo "ℹ️  No database to clean"; \
+	fi
+
+test-observability: ## Test the observability tools with sample data
+	@echo "🧪 Testing observability tools..."
+	cd tools && python test_observability.py
+	@echo "✅ Test completed - check test_reports/ for generated files" 

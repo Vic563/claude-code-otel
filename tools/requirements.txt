@@ -1,0 +1,17 @@
+# Core dependencies for Claude Code observability logging and reporting
+# Basic requirements (always needed)
+setuptools>=45.0.0
+
+# PDF generation (optional but recommended)
+reportlab>=3.6.0
+
+# Google Sheets integration (optional)
+# Uncomment the following lines to enable Google Sheets export:
+# gspread>=5.0.0
+# google-auth>=2.0.0
+# google-auth-oauthlib>=0.5.0
+# google-auth-httplib2>=0.1.0
+
+# Development and testing dependencies (optional)
+# pytest>=6.0.0
+# pytest-cov>=2.0.0

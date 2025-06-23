@@ -38,6 +38,18 @@ Monitor development productivity with comprehensive session analytics, tool usag
 - **Real-time Monitoring**: Live dashboards with 30-second refresh rates
 
 ### 📈 **Rich Dashboards**
+- **Multi-Model Cost Comparison**: Side-by-side cost analysis across Claude models
+- **User Activity Heatmaps**: Visual representation of development activity patterns
+- **Tool Performance Analytics**: Success rates and execution times for each Claude tool
+- **Historical Trend Analysis**: Long-term usage patterns and cost optimization insights
+
+### 🗄️ **SQLite-Based Logging & Reporting** (New!)
+- **Background Data Logger**: Continuously parses Claude Code observability data into SQLite
+- **Historical Reports**: Generate detailed cost and user activity reports (CSV, PDF, JSON)
+- **Custom Analytics**: Direct database access for advanced querying and analysis
+- **Automated Report Generation**: Weekly, monthly, and custom period reports
+
+### 📈 **Rich Dashboards**
 - **Executive Overview**: High-level KPIs and trends
 - **Cost Management**: Detailed cost breakdowns and projections
 - **Tool Performance**: Success rates and execution times
@@ -96,6 +108,22 @@ claude
 - **Prometheus**: http://localhost:9090
 
 > 🖼️ **Visual Guide**: Check out the [Dashboard Screenshots](#-dashboard-screenshots) to see what your dashboards will look like!
+
+### 4. (Optional) Set Up Background Logging & Reports
+```bash
+# Install Python dependencies for observability tools
+make install-observability-tools
+
+# Start background logger to collect data in SQLite
+make start-logger
+
+# Generate cost and user activity reports
+make generate-cost-report
+make generate-user-report
+
+# Test with sample data
+make test-observability
+```
 
 ## 📊 Available Metrics
 
@@ -269,6 +297,50 @@ make setup-claude       # Show Claude Code setup instructions
 - **Usage Insights**: Understand adoption patterns across teams
 - **Cost Control**: Monitor and optimize AI assistance spending
 - **Strategic Planning**: Data-driven decisions on AI tool investments
+
+## 🗄️ Background Logging & Historical Reports
+
+This stack now includes Python-based tools for enhanced data collection and reporting:
+
+### **Background Data Logger**
+- Continuously parses Claude Code observability data from OpenTelemetry logs
+- Stores structured data in SQLite database for historical analysis
+- Supports multiple input sources: Docker logs, files, or stdin
+
+### **Report Generation**
+- **Cost Reports**: Detailed breakdowns by model, user, and time period
+- **User Activity Reports**: Session analytics, productivity metrics, tool usage
+- **Export Formats**: CSV, PDF, JSON (Google Sheets integration planned)
+- **Flexible Periods**: Weekly, monthly, quarterly, or custom date ranges
+
+### **Key Features**
+- **Normalized Database Schema**: Optimized for both ingestion and reporting
+- **Real-time Data Collection**: Processes logs as they're generated
+- **Historical Analysis**: Query data across any time period
+- **Automated Reports**: Schedule regular report generation
+- **Custom Analytics**: Direct SQL access for advanced queries
+
+### **Quick Start with Background Tools**
+```bash
+# Install dependencies
+make install-observability-tools
+
+# Start background logger
+make start-logger
+
+# Generate reports
+make generate-cost-report       # Weekly cost report
+make generate-user-report       # Weekly user activity
+make generate-monthly-reports   # Monthly reports (both types)
+
+# Check database status
+make check-db
+
+# Test with sample data
+make test-observability
+```
+
+See the [tools/README.md](tools/README.md) for detailed documentation.
 
 ## 🔒 Security & Privacy
 

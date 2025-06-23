@@ -43,4 +43,10 @@ loki_data/
 
 # Temporary files
 tmp/
-temp/ 
+temp/
+
+# Observability tools
+claude_code_observability.db
+test_observability.db
+reports/
+test_reports/ 
